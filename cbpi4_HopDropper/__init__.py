@@ -5,7 +5,6 @@ import logging
 from unittest.mock import MagicMock, patch
 from cbpi.api import *
 from cbpi.api.step import StepResult, CBPiStep
-from cbpi.api.timer import Timer
 from datetime import datetime
 from cbpi.api.dataclasses import NotificationAction, NotificationType
 
@@ -35,28 +34,37 @@ class HopDropperActor(CBPiActor):
         super().__init__(cbpi, id, props)
         self.gpio = self.props.GPIO
         self.timeout = float(self.props.get("Timeout", 2))
+        if self.timeout <= 0:
+            self.cbpi.notify(self.name, 'Invalid Timeout Value', 'Timeout should be biiger than 0', NotificationType.WARNING)
+        self.off_task = None
 
-    def on_start(self):
+    async def on_start(self):
         GPIO.setup(int(self.gpio), GPIO.OUT)
         GPIO.output(int(self.gpio), 0)
-        self.state = False
 
-    async def on(self, power=0):
-        if self.state:
+    async def on(self, power=None):
+        if self.state is True:
             return
-
-        logger.info("ACTOR %s is ON" % self.id)
-        self.state = True
         GPIO.output(int(self.gpio), 1)
+        self.state = True
+        logger.info("ACTOR %s is ON" % self.id)
+        self.off_task = asyncio.create_task(self.off_callback())
 
-        if self.timeout > 0:
-            await asyncio.sleep(self.timeout)
-            await self.off()
+    async def off_callback(self):
+        await asyncio.sleep(self.timeout)
+        if self.off_task is None:
+            return
+        await self.off()
+        self.off_task = None
+        await self.cbpi.actor.actor_update(self.id, self.power)
+        logger.info("Off task set to None after timed turn off")
 
     async def off(self):
-        logger.info("ACTOR %s is OFF " % self.id)
+        if self.state is False:
+            return
         GPIO.output(int(self.gpio), 0)
         self.state = False
+        logger.info("ACTOR %s is OFF " % self.id)
 
     def get_state(self):
         return self.state
