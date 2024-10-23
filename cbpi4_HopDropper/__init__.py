@@ -36,22 +36,18 @@ class HopDropperActor(CBPiActor):
         self.power = None
         self.gpio = self.props.GPIO
         self.timeout = float(self.props.get("Timeout", 2))
+        self.timer = Timer(self.timeout, self.off)
 
     def on_start(self):
         GPIO.setup(int(self.gpio), GPIO.OUT)
         GPIO.output(int(self.gpio), 0)
         self.state = False
 
-    async def on(self):
+    async def on(self, power=None):
         logger.info("ACTOR %s is ON" % self.id)
         GPIO.output(int(self.gpio), 1)
         self.state = True
-
-        if self.timeout > 0:
-            logger.info("before sleep")
-            await asyncio.sleep(self.timeout)
-            logger.info("after sleep")
-            await self.off()
+        self.timer.start()
 
     async def off(self):
         logger.info("ACTOR %s is OFF " % self.id)
