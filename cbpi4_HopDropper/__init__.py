@@ -33,10 +33,10 @@ class HopDropperActor(CBPiActor):
 
     def __init__(self, cbpi, id, props):
         super().__init__(cbpi, id, props)
-        self.gpio = self.props.GPIO
-        self.timeout = float(self.props.get("Timeout", 2))
 
     def on_start(self):
+        self.gpio = self.props.GPIO
+        self.timeout = float(self.props.get("Timeout", 2))
         GPIO.setup(int(self.gpio), GPIO.OUT)
         GPIO.output(int(self.gpio), 0)
         self.state = False
