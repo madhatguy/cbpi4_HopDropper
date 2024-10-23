@@ -59,7 +59,7 @@ class HopDropperActor(CBPiActor):
 
     async def run(self):
         while self.running:
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.1)
 
 
 @parameters([Property.Number(label="Timer", description="Time in Minutes", configurable=True),
